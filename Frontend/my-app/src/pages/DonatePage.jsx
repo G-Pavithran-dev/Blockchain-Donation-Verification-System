@@ -4,7 +4,7 @@ import { useAccount } from 'wagmi';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Loading } from '@/components/shared/Loading';
 import { ErrorMessage } from '@/components/shared/ErrorMessage';
-import { getCampaignById, getNgoById } from '@/lib/api';
+import { getCampaignById, getNgoById, createRazorpayOrder } from '@/lib/api';
 import { loadContractConfig, createWalletClientInstance, writeContract } from '@/lib/contracts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,9 +23,17 @@ export function DonatePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  const [amount, setAmount] = useState('');
+  const [amountInr, setAmountInr] = useState('');
   const [transactionRef, setTransactionRef] = useState('');
+  const [paymentMode, setPaymentMode] = useState('upi'); // 'upi' | 'razorpay-mock'
   const [submitting, setSubmitting] = useState(false);
+
+  function simulateRazorpayPayment() {
+    // Mock a Razorpay-style payment id (no external calls)
+    const mockId = `rzp_mock_${Date.now()}`;
+    setTransactionRef(mockId);
+    toast.success(`Mock payment complete: ${mockId}`);
+  }
 
   useEffect(() => {
     loadCampaignInfo();
@@ -56,18 +64,41 @@ export function DonatePage() {
       return;
     }
 
-    if (!amount || parseFloat(amount) <= 0) {
-      toast.error('Please enter a valid amount');
+    if (!amountInr || parseFloat(amountInr) <= 0) {
+      toast.error('Please enter a valid amount in INR');
       return;
     }
 
-    if (!transactionRef.trim()) {
+    if (paymentMode === 'upi' && !transactionRef.trim()) {
       toast.error('Please enter a transaction reference');
       return;
     }
 
     try {
       setSubmitting(true);
+
+      let finalRef = transactionRef.trim();
+      const amountForChain = BigInt(Math.round(parseFloat(amountInr) * 100)); // store in paise on-chain
+
+      // If using the Razorpay-like flow, try to create a real order; if not configured, fall back to a mock id.
+      if (paymentMode === 'razorpay-mock') {
+        let orderId = null;
+        try {
+          toast.info('Creating Razorpay order...');
+          const order = await createRazorpayOrder({
+            amountInr: parseFloat(amountInr),
+            campaignId: Number(campaignId),
+          });
+          orderId = order.id;
+        } catch (orderErr) {
+          console.warn('Razorpay not configured, using mock order id', orderErr);
+          orderId = `rzp_mock_${Date.now()}`;
+        }
+        if (!finalRef) {
+          finalRef = orderId;
+        }
+      }
+
       toast.info('Loading contract configuration...');
       
       const config = await loadContractConfig();
@@ -84,7 +115,7 @@ export function DonatePage() {
         config.addresses.DonationLedger,
         config.abis.DonationLedger,
         'recordDonation',
-        [BigInt(campaignId), BigInt(amount), transactionRef]
+        [BigInt(campaignId), amountForChain, finalRef]
       );
 
       toast.success(`Donation recorded! Transaction: ${hash.slice(0, 10)}...`);
@@ -125,9 +156,10 @@ export function DonatePage() {
     );
   }
 
-  const isActive = campaign.active && new Date(Number(campaign.endDate) * 1000) > new Date();
+  const active = campaign.active ?? campaign.isActive;
+  const isActive = active && new Date(Number(campaign.endDate) * 1000) > new Date();
 
-  if (!isActive) {
+    if (!isActive) {
     return (
       <PageContainer>
         <Card>
@@ -170,18 +202,43 @@ export function DonatePage() {
           <CardContent>
             <form onSubmit={handleDonate} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount (in Wei)</Label>
+                <Label>Payment Method</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button
+                    type="button"
+                    variant={paymentMode === 'upi' ? 'default' : 'outline'}
+                    onClick={() => setPaymentMode('upi')}
+                    disabled={submitting}
+                  >
+                    UPI / Bank (Manual)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={paymentMode === 'razorpay-mock' ? 'default' : 'outline'}
+                    onClick={() => setPaymentMode('razorpay-mock')}
+                    disabled={submitting}
+                  >
+                    Razorpay (Mock)
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This app records a proof/reference on-chain (no money is transferred on-chain).
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="amountInr">Amount (INR)</Label>
                 <Input
-                  id="amount"
+                  id="amountInr"
                   type="number"
-                  placeholder="1000000000000000000"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="500"
+                  value={amountInr}
+                  onChange={(e) => setAmountInr(e.target.value)}
                   required
                   disabled={submitting}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Note: 1 ETH = 1,000,000,000,000,000,000 Wei
+                  This is the off-chain payment amount in INR (e.g. via UPI / Razorpay).
                 </p>
               </div>
 
@@ -199,6 +256,18 @@ export function DonatePage() {
                 <p className="text-xs text-muted-foreground">
                   Enter your UPI ID, bank reference, or any payment identifier
                 </p>
+                {paymentMode === 'razorpay-mock' && (
+                  <div className="pt-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={simulateRazorpayPayment}
+                      disabled={submitting}
+                    >
+                      Simulate Razorpay Payment (Mock)
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-lg bg-muted p-4 text-sm">

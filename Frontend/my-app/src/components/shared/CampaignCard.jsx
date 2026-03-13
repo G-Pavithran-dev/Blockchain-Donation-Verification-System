@@ -5,7 +5,8 @@ import { Link } from 'react-router-dom';
 import { Calendar } from 'lucide-react';
 
 export function CampaignCard({ campaign, ngoName }) {
-  const { campaignId, title, description, endDate, active } = campaign;
+  const { campaignId, title, description, endDate } = campaign;
+  const active = campaign.active ?? campaign.isActive;
   const isActive = active && new Date(Number(endDate) * 1000) > new Date();
 
   return (

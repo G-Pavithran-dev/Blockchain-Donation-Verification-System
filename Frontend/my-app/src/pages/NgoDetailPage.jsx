@@ -95,7 +95,7 @@ export function NgoDetailPage() {
                   Registration: {ngo.registrationNumber}
                 </CardDescription>
                 <CardDescription className="text-xs font-mono mt-1">
-                  {ngo.wallet}
+                  {ngo.wallet ?? ngo.walletAddress ?? '—'}
                 </CardDescription>
               </div>
               <VerifiedBadge verified={ngo.verified} />
@@ -115,8 +115,8 @@ export function NgoDetailPage() {
           <h2 className="text-2xl font-bold mb-6">Campaigns</h2>
           {campaigns.length === 0 ? (
             <EmptyState
-              title="No campaigns yet"
-              description="This NGO hasn't created any campaigns yet."
+              title="No active campaigns"
+              description="This NGO has no active campaigns at the moment."
             />
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

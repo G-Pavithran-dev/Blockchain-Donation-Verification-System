@@ -5,6 +5,7 @@ import { VerifiedBadge } from './VerifiedBadge';
 
 export function NgoCard({ ngo }) {
   const { ngoId, name, registrationNumber, verified, wallet } = ngo;
+  const walletDisplay = wallet || '—';
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -14,7 +15,7 @@ export function NgoCard({ ngo }) {
           <VerifiedBadge verified={verified} />
         </div>
         <CardDescription className="text-xs font-mono truncate">
-          {wallet}
+          {walletDisplay}
         </CardDescription>
       </CardHeader>
       <CardContent>

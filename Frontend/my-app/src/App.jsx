@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { WagmiProvider, createConfig, http } from 'wagmi';
-import { hardhat, localhost } from 'wagmi/chains';
+import { hardhat } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
@@ -18,13 +18,12 @@ import { DashboardPage } from './pages/DashboardPage';
 import { AdminPage } from './pages/AdminPage';
 import { RegisterNgoPage } from './pages/RegisterNgoPage';
 
-// Configure wagmi
+// Configure wagmi. Hardhat node uses chainId 31337; list hardhat first so it matches the node.
 const config = getDefaultConfig({
   appName: 'CivicTrust',
   projectId: 'YOUR_PROJECT_ID', // Get from WalletConnect Cloud
-  chains: [localhost, hardhat],
+  chains: [hardhat],
   transports: {
-    [localhost.id]: http(),
     [hardhat.id]: http(),
   },
 });

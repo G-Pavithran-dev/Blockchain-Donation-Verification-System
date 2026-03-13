@@ -54,10 +54,11 @@ export function CampaignsPage() {
         })
       );
 
-      // Filter only active campaigns
-      const activeCampaigns = campaignsWithNgo.filter(c => 
-        c.active && new Date(Number(c.endDate) * 1000) > new Date()
-      );
+      // Filter only active campaigns (API returns isActive)
+      const activeCampaigns = campaignsWithNgo.filter(c => {
+        const active = c.active ?? c.isActive;
+        return active && new Date(Number(c.endDate) * 1000) > new Date();
+      });
 
       setCampaigns(activeCampaigns);
     } catch (err) {

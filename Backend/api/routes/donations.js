@@ -1,7 +1,17 @@
 const express = require("express");
+const Razorpay = require("razorpay");
 const { getContracts } = require("../contracts");
 
 const router = express.Router();
+
+// Optional Razorpay client (configured when env vars are set)
+let razorpay = null;
+if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+  razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
+}
 
 /**
  * GET /api/donations/config
@@ -13,7 +23,45 @@ router.get("/config", (req, res) => {
     const network = process.env.NETWORK || "localhost";
     const config = getFrontendConfig(network);
     if (!config) return res.status(503).json({ error: "Deployments not loaded" });
-    res.json(config.contracts.DonationLedger);
+    res.json({
+      ledger: config.contracts.DonationLedger,
+      razorpay: razorpay
+        ? { keyId: process.env.RAZORPAY_KEY_ID }
+        : null,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * POST /api/donations/razorpay/order
+ * Body: { amountInr: number, campaignId: number }
+ * Creates a Razorpay order in INR (amount in rupees).
+ */
+router.post("/razorpay/order", async (req, res) => {
+  try {
+    if (!razorpay) {
+      return res.status(503).json({ error: "Razorpay is not configured on the server" });
+    }
+
+    const { amountInr, campaignId } = req.body;
+    const value = Number(amountInr);
+    if (!value || !isFinite(value) || value <= 0) {
+      return res.status(400).json({ error: "Valid amountInr is required" });
+    }
+
+    const amountPaise = Math.round(value * 100);
+
+    const order = await razorpay.orders.create({
+      amount: amountPaise,
+      currency: "INR",
+      notes: {
+        campaignId: String(campaignId ?? ""),
+      },
+    });
+
+    res.json(order);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

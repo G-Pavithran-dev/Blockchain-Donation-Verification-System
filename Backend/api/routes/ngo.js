@@ -49,21 +49,44 @@ router.get("/count", async (req, res) => {
 
 /**
  * GET /api/ngo/list
- * List all NGOs (admin only on-chain; API uses backend signer if PRIVATE_KEY is admin).
+ * List all NGOs. Uses admin signer for listOfNGOs() when PRIVATE_KEY is set;
+ * otherwise builds list from ngoCounter + getNGOById (no wallet address in that case).
  */
 router.get("/list", async (req, res) => {
   try {
-    const { VerificationLedger } = getContracts();
-    const list = await VerificationLedger.listOfNGOs();
-    const ngos = list.map((n) => ({
-      ngoId: Number(n.ngoId),
-      name: n.name,
-      registrationNumber: n.registrationNumber,
-      panCardNumber: n.panCardNumber,
-      walletAddress: n.walletAddress,
-      isVerified: n.isVerified,
-      exists: n.exists,
-    }));
+    const { VerificationLedger, VerificationLedgerReadOnly } = getContracts();
+    let ngos;
+
+    try {
+      const list = await VerificationLedger.listOfNGOs();
+      ngos = list.map((n) => ({
+        ngoId: Number(n.ngoId),
+        name: n.name,
+        registrationNumber: n.registrationNumber,
+        panCardNumber: n.panCardNumber,
+        walletAddress: n.walletAddress,
+        isVerified: n.isVerified,
+        exists: n.exists,
+      }));
+    } catch (adminErr) {
+      // Fallback when PRIVATE_KEY is not set or not admin: build list from count + getNGOById
+      const ngoCounter = await VerificationLedgerReadOnly.ngoCounter();
+      const count = Number(ngoCounter);
+      ngos = [];
+      for (let id = 1; id <= count; id++) {
+        const n = await VerificationLedgerReadOnly.getNGOById(id);
+        ngos.push({
+          ngoId: Number(n[0]),
+          name: n[1],
+          registrationNumber: n[2],
+          panCardNumber: n[3],
+          walletAddress: null,
+          isVerified: n[4],
+          exists: true,
+        });
+      }
+    }
+
     res.json({ ngos });
   } catch (e) {
     res.status(500).json({ error: e.message });

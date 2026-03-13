@@ -20,12 +20,11 @@ export async function isAdmin(address) {
  */
 export async function getNgoByAddress(address) {
   if (!address) return null;
-  
+
   try {
     const ngo = await getNgoByWallet(address);
-    return ngo;
+    return ngo ? { ...ngo, ngoId: ngo.ngoId ?? ngo.id } : null;
   } catch (error) {
-    // Not an NGO or error
     return null;
   }
 }

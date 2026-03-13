@@ -47,7 +47,12 @@ export function AdminPage() {
       }
 
       const data = await getNgoList();
-      setNgos(Array.isArray(data) ? data : []);
+      const list = data?.ngos ?? (Array.isArray(data) ? data : []);
+      setNgos(list.map((n) => ({
+        ...n,
+        verified: n.verified ?? n.isVerified,
+        wallet: n.wallet ?? n.walletAddress ?? '',
+      })));
     } catch (err) {
       setError(err.message);
     } finally {

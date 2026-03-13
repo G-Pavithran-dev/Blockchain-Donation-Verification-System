@@ -77,7 +77,8 @@ export function CampaignDetailPage() {
     );
   }
 
-  const isActive = campaign.active && new Date(Number(campaign.endDate) * 1000) > new Date();
+  const active = campaign.active ?? campaign.isActive;
+  const isActive = active && new Date(Number(campaign.endDate) * 1000) > new Date();
 
   return (
     <PageContainer>

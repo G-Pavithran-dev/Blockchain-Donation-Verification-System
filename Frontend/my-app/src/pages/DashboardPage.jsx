@@ -152,10 +152,11 @@ function NgoDashboard({ ngo, address }) {
           </CardTitle>
           <CardDescription>Your registration is pending verification</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="text-muted-foreground">
             Your NGO registration has been submitted and is awaiting admin verification.
-            Once verified, you'll be able to create campaigns and receive donations.
+            Once verified, you'll see <strong>My NGO</strong>, <strong>My Campaigns</strong>, and
+            be able to create campaigns and receive donations.
           </p>
         </CardContent>
       </Card>
@@ -164,40 +165,56 @@ function NgoDashboard({ ngo, address }) {
 
   return (
     <div className="space-y-6">
+      {/* My NGO card with link to public page */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
-                NGO Dashboard: {ngo.name}
+                My NGO: {ngo.name}
               </CardTitle>
-              <CardDescription>Manage your campaigns</CardDescription>
+              <CardDescription>Your organization's public page</CardDescription>
             </div>
-            <Button onClick={() => setShowCreateForm(!showCreateForm)}>
+            <Link to={`/ngos/${ngo.ngoId}`}>
+              <Button variant="outline">View my NGO page</Button>
+            </Link>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Create Campaign + My Campaigns */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle>My Campaigns</CardTitle>
+              <CardDescription>Create and manage your fundraising campaigns</CardDescription>
+            </div>
+            <Button onClick={() => setShowCreateForm(!showCreateForm)} size="lg">
               {showCreateForm ? 'Cancel' : 'Create Campaign'}
             </Button>
           </div>
         </CardHeader>
         {showCreateForm && (
-          <CardContent>
-            <CreateCampaignForm 
-              ngoId={ngo.ngoId} 
+          <CardContent className="border-t pt-6">
+            <CreateCampaignForm
+              ngoId={ngo.ngoId}
               onSuccess={() => {
                 setShowCreateForm(false);
                 loadCampaigns();
-              }} 
+              }}
             />
           </CardContent>
         )}
       </Card>
 
       <div>
-        <h2 className="text-2xl font-bold mb-4">My Campaigns</h2>
+        <h2 className="text-xl font-semibold mb-4">Campaign list</h2>
         {loadingCampaigns && <Loading count={3} type="card" />}
         {!loadingCampaigns && campaigns.length === 0 && (
           <EmptyState
-            title="No campaigns yet"
+            title="No active campaigns"
             description="Create your first campaign to start receiving donations."
             action={
               <Button onClick={() => setShowCreateForm(true)}>
@@ -209,9 +226,9 @@ function NgoDashboard({ ngo, address }) {
         {!loadingCampaigns && campaigns.length > 0 && (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {campaigns.map((campaign) => (
-              <CampaignCard 
-                key={campaign.campaignId} 
-                campaign={campaign} 
+              <CampaignCard
+                key={campaign.campaignId}
+                campaign={campaign}
                 ngoName={ngo.name}
               />
             ))}
@@ -272,8 +289,10 @@ function CreateCampaignForm({ ngoId, onSuccess }) {
         throw new Error('Wallet client not available');
       }
 
-      // Convert date to Unix timestamp
-      const timestamp = Math.floor(new Date(endDate).getTime() / 1000);
+      // End of selected day (23:59:59 local) so e.g. "March 31" is active all day
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      const timestamp = Math.floor(endOfDay.getTime() / 1000);
 
       toast.info('Please confirm the transaction in your wallet...');
 

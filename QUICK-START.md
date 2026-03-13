@@ -9,6 +9,26 @@ This guide will help you get the complete CivicTrust application up and running 
 
 ## Step-by-Step Setup
 
+### One-command setup (recommended)
+
+From the repo root:
+
+```bash
+npm install
+npm run install:all
+npm run start-show
+```
+
+This will run, in order, without you opening multiple terminals manually:
+- Hardhat local node
+- Contract deployment
+- Backend API
+- Frontend (Vite)
+
+If you already have a node/API/frontend running, `start-show` will **skip** starting anything whose port is already in use (8545, 3001) to avoid `EADDRINUSE`.
+
+---
+
 ### 1. Install Backend Dependencies
 
 ```bash

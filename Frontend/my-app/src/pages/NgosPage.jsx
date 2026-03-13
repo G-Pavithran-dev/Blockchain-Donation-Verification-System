@@ -23,7 +23,12 @@ export function NgosPage() {
       setLoading(true);
       setError(null);
       const data = await getNgoList();
-      setNgos(Array.isArray(data) ? data : []);
+      const list = data?.ngos ?? (Array.isArray(data) ? data : []);
+      setNgos(list.map((n) => ({
+        ...n,
+        verified: n.verified ?? n.isVerified,
+        wallet: n.wallet ?? n.walletAddress ?? '',
+      })));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -79,7 +84,7 @@ export function NgosPage() {
               ? "No verified NGOs are available yet." 
               : "No NGOs have registered yet. Be the first!"}
             action={
-              <Link to="/dashboard">
+              <Link to="/register-ngo">
                 <Button>Register Your NGO</Button>
               </Link>
             }
